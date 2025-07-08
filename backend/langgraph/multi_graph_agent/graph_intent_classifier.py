@@ -77,8 +77,8 @@ async def node_intent_classifier(state: SharedState) -> SharedState:
         result_content = ["fallback"]
 
     # Always add fallback intent if the intent is only indentify
-    # if len(result_content) == 1 and result_content[0] == "identify":
-    #     result_content.append("fallback")
+    if len(result_content) == 1 and result_content[0] == "identify":
+        result_content.append("fallback")
 
     print(f"\nIntent List: {result_content}")
 

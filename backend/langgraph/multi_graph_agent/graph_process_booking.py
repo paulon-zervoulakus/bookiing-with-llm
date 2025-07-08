@@ -25,15 +25,15 @@ def get_booking_service():
 
 def save_booking_schedule(booking_info: BookingSchema) -> BookingSchema:
     """Save booking schedule from user information"""
-
+    print(f"\n============================= save_booking_schedule")
     # print(f"\nsave_booking_schedule:\n{booking_info["name"]}\n{booking_info["email"]}\n{booking_info["schedule_date"]}\n{booking_info["schedule_time"]}")
     with get_booking_service() as booking_service:
         try:
             booking_dto = BookingModel(
                 name=booking_info["name"],
                 email=booking_info["email"],
-                date=booking_info["schedule_date"],
-                time=booking_info["schedule_time"]
+                schedule_date=booking_info["schedule_date"],
+                schedule_time=booking_info["schedule_time"]
             )
 
             new_booking = booking_service.create_booking(booking_dto)
@@ -46,10 +46,11 @@ def save_booking_schedule(booking_info: BookingSchema) -> BookingSchema:
     return booking_info
 
 async def node_analyze_message_and_scrape_booking_info(state: SharedState) -> SharedState:
-    print(f"\n===== node_analyze_message_and_scrape_booking_info =====")
-    """
-    Handle the complete booking flow: analysis -> validation -> booking creation
-    """
+    """Handle the complete booking flow: analysis -> validation -> booking creation"""
+    print(f"\n============================= node_analyze_message_and_scrape_booking_info")
+
+    print(f"\nTime check\n - before llm: node_analyze_message_and_scrape_booking_info")
+    start_time = datetime.now()
     system_msg = SystemMessage(content="""
 You are a strict Schedule Booker Analyzer.
 
@@ -79,13 +80,16 @@ Format:
     ])
     try:
         content_obj = json.loads(llm_response.content.strip())
+        print(f" - content_obj: {content_obj}")
+        elapsed = (datetime.now() - start_time).total_seconds()
+        print(f"\nTime check\n - after llm: node_analyze_message_and_scrape_booking_info - time: {elapsed:.3f}")
         return { **state, "booking_info": content_obj["booking_info"] }
     except json.JSONDecodeError:
         print("🚨 LLM returned unexpected content:\n", llm_response.content)
-        raise
+        return { **state }
 
 async def node_validate_booking_information(state: SharedState) -> SharedState:
-    print(f"\n===== node_validate_booking_information =====")
+    print(f"\n============================= node_validate_booking_information")
     def is_date_invalid(date_str):
         if not date_str:
             return True
@@ -150,13 +154,13 @@ async def node_validate_booking_information(state: SharedState) -> SharedState:
     }
 
 async def node_booking_form(state: SharedState) -> SharedState:
-    print(f"\n===== node_booking_form =====")
+    print(f"\n============================= node_booking_form")
 
     try:
         # check if there is a missing field
         if state["incomplete_fields"] and len(state["incomplete_fields"])>0:
-            missing_msg = ", ".join(f"{k}: \"{v}\"" for k, v in state["booking_info"].items() if k in state["incomplete_fields"])
-            content_msg = f"In order to proceed with booking, please provide the following missing detail(s): {missing_msg}"
+            missing_msg = "\n".join(f"{k}: \"{v}\"" for k, v in state["booking_info"].items())
+            content_msg = f"In order to proceed with booking, please provide the following missing detail(s):\n{missing_msg}"
             return {
                 **state,
                 "booking_status": "incomplete",
@@ -171,7 +175,7 @@ async def node_booking_form(state: SharedState) -> SharedState:
         }
 
 async def node_save_booking(state: SharedState) -> SharedState:
-    print(f"\n===== node_save_booking =====")
+    print(f"\n============================= node_save_booking")
     save_booking = save_booking_schedule(state["booking_info"])
     if save_booking["booking_status"] == "confirmed":
         return {
@@ -184,8 +188,8 @@ async def node_save_booking(state: SharedState) -> SharedState:
             ]
         }
     else:
-        missing_msg = ", ".join(f"{k}: \"{v}\"" for k, v in state["booking_info"].items() if k in state["incomplete_fields"])
-        content_msg = f"In order to proceed with booking, please provide the following missing detail(s): {missing_msg}"
+        missing_msg = "\n".join(f"{k}: \"{v}\"" for k, v in state["booking_info"].items())
+        content_msg = f"In order to proceed with booking, please provide the following missing detail(s):\n{missing_msg}"
         return {
             **state,
             "booking_status": "failed",

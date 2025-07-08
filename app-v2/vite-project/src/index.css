@@ -66,14 +66,14 @@ body {
   font-size: 1.5rem;
 }
 
-.user-info {
+.human-info {
   display: flex;
   align-items: center;
   gap: 15px;
   color: white;
 }
 
-.user-avatar {
+.human-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -96,7 +96,7 @@ body {
 
 .main-content {
   display: grid;
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: 1fr 600px;
   gap: 20px;
   padding: 20px;
   flex: 1;
@@ -111,6 +111,10 @@ body {
   padding: 25px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
+}
+
+.right-column {
+  height: calc(100vh - 110px);
 }
 
 .booking-form {
@@ -236,7 +240,7 @@ body {
 .chat-container {
   display: flex;
   flex-direction: column;
-  height: 80vh;
+  height: 100%;
 }
 
 .chat-header {
@@ -263,13 +267,13 @@ body {
   max-width: 80%;
 }
 
-.message.user {
+.message.human {
   background: #667eea;
   color: white;
   margin-left: auto;
 }
 
-.message.bot {
+.message.ai {
   background: white;
   border: 1px solid #e1e5e9;
 }
@@ -343,11 +347,11 @@ body {
     font-size: 1.2rem;
   }
   
-  .user-info {
+  .human-info {
     gap: 10px;
   }
   
-  .user-avatar {
+  .human-avatar {
     width: 35px;
     height: 35px;
   }

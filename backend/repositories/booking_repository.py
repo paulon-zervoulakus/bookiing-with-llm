@@ -10,7 +10,7 @@ class BookingRepository:
         self.db = db
 
     def get_all(self):
-        return self.db.query(BookingModel).all()
+        return self.db.query(BookingModel).order_by(BookingModel.created_at.desc()).all()
 
     def get_by_id(self, booking_id: str):
         return self.db.query(BookingModel).get(booking_id)

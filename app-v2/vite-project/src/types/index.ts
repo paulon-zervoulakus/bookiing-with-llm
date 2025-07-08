@@ -20,8 +20,8 @@ export interface Booking {
 }
 
 export interface Message {
-  type: 'user' | 'bot';
-  text: string;
+	type: "human" | "ai";
+	text: string;
 }
 
 export interface GoogleCredentialResponse {

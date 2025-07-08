@@ -20,7 +20,7 @@ async def post_llm_query(
     
     state = {
         # "messages": [],
-        # "booking_info": {"name": current_user.name, "email": current_user.email},
+        "booking_info": {"name": current_user.name, "email": current_user.email},
         "input_message": req.query,
         "human_inquiry": "",
         "chunk_answer_from_inquiry": "",

@@ -23,8 +23,8 @@ If NO inquiry is detected:
 
 If YES, an inquiry is detected:
 - CLASSIFY the question as either:
-  1. GENERAL KNOWLEDGE: Questions that can be answered with general knowledge about immigration processes, requirements, or procedures.
-  2. SPECIFIC FACTS: Questions that require specific, up-to-date factual information, statistics, or time-sensitive details.
+  1. GENERAL KNOWLEDGE: Basic conceptual questions about immigration processes, general explanations, or "what is" type questions.
+  2. SPECIFIC FACTS: Questions about requirements, documents, processing times, fees, eligibility criteria, specific procedures, or any detailed factual information.
 
 For GENERAL KNOWLEDGE questions:
 - Return the query format: "GENERAL: [cleaned and rephrased for clear question]"
@@ -33,8 +33,14 @@ For SPECIFIC FACTS questions:
 - Return the query format: "FACTS_NEEDED: [cleaned and rephrased for clear question]"
 
 Examples:
+- Input: "What is Express Entry?"
+  → "GENERAL: explanation of Express Entry immigration system"
+  
 - Input: "What documents do I need for a Canadian work visa?"
-  → "GENERAL: required documents for Canadian work visa application"
+  → "FACTS_NEEDED: required documents for Canadian work visa application"
+  
+- Input: "What are the requirements for migration to Canada?"
+  → "FACTS_NEEDED: requirements for migration to Canada"
   
 - Input: "What is the current processing time for Express Entry applications?"
   → "FACTS_NEEDED: current processing time for Express Entry applications in Canada"
@@ -43,10 +49,10 @@ Examples:
   → "FACTS_NEEDED: minimum points threshold for Express Entry Canada"
   
 - Input: "Do I need to pass a language test for immigration?"
-  → "GENERAL: language test requirements for Canadian immigration"
+  → "FACTS_NEEDED: language test requirements for Canadian immigration"
     
-- Input: "What is the center of canada?"
-  → "GENERAL: What is the capital of Canada?"
+- Input: "What is the capital of Canada?"
+  → "GENERAL: What is the capital of Canada?"s
   
 - Input: "Hello I'm Alice, just saying hi"
   → ""
@@ -57,7 +63,6 @@ Examples:
         system_msg,
         HumanMessage(content=input_message)
     ])
-    
     try:
         human_inquiry = result.content
     except Exception:
@@ -80,28 +85,57 @@ async def node_rag_query(state: SharedState) -> SharedState:
         }
 
     try:
-        # Call the existing rag_query_vector tool directly
-        # rag_results = await rag_query_vector(human_inquiry)
-
+        collection = get_collection()
+        
+        # DEBUG: Check collection info
+        print(f"Collection count: {collection.count()}")
+        print(f"Collection name: {collection.name}")
+        
+        # DEBUG: Get a few sample documents to see what's in there
+        sample_results = collection.peek(limit=3)
+        print(f"Sample documents: {sample_results}")
+        
+        if collection.count() == 0:
+            print("❌ ERROR: Vector database is empty!")
+            return {
+                **state,
+                "chunk_answer_from_inquiry": ["No documents found in database"]
+            }
+        
+        # Continue with your query
         model = SentenceTransformer("paraphrase-MiniLM-L3-v2")
         question_embedding = model.encode([human_inquiry_value]).tolist()[0]
-        collection = get_collection()
+        
         results = collection.query(
             query_embeddings=[question_embedding],
             n_results=3
         )
+        
+        # DEBUG: Check what the query returned
+        print(f"Query results structure: {results.keys()}")
+        print(f"Documents found: {len(results.get('documents', [[]])[0])}")
+        print(f"Distances: {results.get('distances', [[]])[0]}")
+        
         relevant_chunks = results["documents"][0]
-
+        print(f"\n\trelevant_chunks raw: {human_inquiry_value} - {relevant_chunks}")
+        
+        if not relevant_chunks:
+            print("❌ No relevant documents found for this query")
+            return {
+                **state,
+                "chunk_answer_from_inquiry": ["No relevant documents found"]
+            }
+        
         return {
             **state,
             "chunk_answer_from_inquiry": relevant_chunks
         }
 
-    except JSONDecodeError as e:
-        print(f"\nSomething wen't wrong: {e.msg}")
+    except Exception as e:
+        print(f"\n❌ Error in RAG query: {str(e)}")
         return {
             **state,
-            "chunk_answer_from_inquiry": ""
+            "chunk_answer_from_inquiry": [f"Error: {str(e)}"]
         }
 
 
@@ -119,6 +153,7 @@ Your task is to analyze the user's question and provide a comprehensive, natural
 - If the user's name is available, greet them naturally once
 - Avoid filler or irrelevant general advice
 - Do not repeat the question
+- Synthesize and shorten the response
 
 🛑 NEVER do the following:
 - Avoid halucinating responses
@@ -127,7 +162,7 @@ Your task is to analyze the user's question and provide a comprehensive, natural
 
 🤖 Refer to yourself as: Travis (your Agentic Assistant AI)
 
-✅ Output a natural-sounding, complete response that **answers the user's question directly** and optionally follows up with help if needed.
+✅ Output a natural-sounding, synthesize and short response that **answers the user's question directly**.
 """
 
     elif inquery_type == "FACTS_NEEDED":
@@ -141,11 +176,11 @@ You will use the "RELEVANT_INFORMATION" for a factual base and relevant informat
 3. If the question is vague, offer helpful clarification or guidance
 
 📌 RESPONSE RULES:
-- Be warm, professional, and helpful — but concise
 - If the user's name is available, greet them naturally once
 - Avoid filler or irrelevant general advice
 - Do not repeat the question
 - Avoid paragraphs of general info unless they help the question
+- Synthesize and shorten the response
 
 🛑 NEVER do the following:
 - Avoid halucinating responses
@@ -154,7 +189,7 @@ You will use the "RELEVANT_INFORMATION" for a factual base and relevant informat
 
 🤖 Refer to yourself as: Travis (your Agentic Assistant AI)
 
-✅ Output a natural-sounding, complete response that **answers the user's question directly** and optionally follows up with help if needed.
+✅ Output a natural-sounding, synthesize and short response that **answers the user's question directly**.
 """
 
     return to_return
@@ -197,7 +232,8 @@ async def node_summarize_response(state: SharedState) -> SharedState:
         current_messages = state.get("messages", []) + [ai_message]
         return {
             **state,
-            "messages": current_messages
+            "messages": current_messages,
+            "chunk_answer_from_inquiry": chunk_data
         }
     except Exception as e:
         print(f"Error generating summary: {e}")
@@ -211,7 +247,6 @@ async def node_summarize_response(state: SharedState) -> SharedState:
             "messages": current_messages
         }
 
-
 def route_after_scraper(state: SharedState) -> str:
     if state.get("human_inquiry"):
         human_inquiry_split = state.get("human_inquiry").split(":")
@@ -223,7 +258,6 @@ def route_after_scraper(state: SharedState) -> str:
             return "end"
     else:
         return "end"
-
 
 graph_human_question = (
     StateGraph(SharedState)

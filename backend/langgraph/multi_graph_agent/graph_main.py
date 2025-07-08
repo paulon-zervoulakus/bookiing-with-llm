@@ -33,9 +33,9 @@ async def route_by_intents(state: SharedState) -> SharedState:
         elif intent == "fallback":
             result = await graph_fallback.ainvoke(state, config)
             state.update(result)
-        # elif intent == "bookings":
-        #     result = await graph_process_booking.ainvoke(state, config)
-        #     state.update(result)
+        elif intent == "bookings":
+            result = await graph_process_booking.ainvoke(state, config)
+            state.update(result)
 
     print(f"\n POST State: {state}")
     return state
