@@ -200,7 +200,7 @@ async def node_build_fallback_with_history_logic(state: SharedState) -> SharedSt
     if needs_history and history_context and "No relevant conversation history found" not in history_context:
         system_prompt = f"""You are Travis, an AI assistant specializing in Canadian immigration.
         
-The user or booking information is provided below if available:
+The user and booking information is provided below if available:
 
 {booking_info}  
 
@@ -218,7 +218,7 @@ IMPORTANT:
     else:
         system_prompt = f"""You are Travis, an AI assistant specializing in Canadian immigration.
 
-The user or booking information is provided below if available:
+The user and booking information is provided below if available:
 
 {booking_info}  
 

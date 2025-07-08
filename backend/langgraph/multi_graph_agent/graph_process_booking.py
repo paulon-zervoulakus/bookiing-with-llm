@@ -51,10 +51,15 @@ async def node_analyze_message_and_scrape_booking_info(state: SharedState) -> Sh
 
     print(f"\nTime check\n - before llm: node_analyze_message_and_scrape_booking_info")
     start_time = datetime.now()
-    system_msg = SystemMessage(content="""
+
+    # Booking Information
+    booking_info = state.get("booking_info", {})
+
+    system_msg = SystemMessage(content=f"""
 You are a strict Schedule Booker Analyzer.
 
-Return only a valid JSON object. No text, no formatting, no explanation.
+The user and booking information is provided below if available:
+{booking_info}
 
 Extract the following booking details:
 - name
@@ -65,14 +70,16 @@ Extract the following booking details:
 If any field is missing, use "".
 
 Format:
-{
-  "booking_info": {
+{{
+  "booking_info": {{
     "name": "...",
     "email": "...",
     "schedule_date": "...",
     "schedule_time": "..."
-  }
-}
+  }}
+}}
+
+Return only a valid JSON object. No text, no formatting, no explanation.
 """)
     llm_response = await base_llm.ainvoke([
         system_msg,
@@ -143,10 +150,16 @@ async def node_validate_booking_information(state: SharedState) -> SharedState:
             incomplete_fields.append("email")
 
     add_date_if_invalid = lambda date_str, incomplete_fields: incomplete_fields.append("schedule_date") if is_date_invalid(date_str) else None
-    add_date_if_invalid(booking_info["schedule_date"], incomplete_fields)
+    if "schedule_date" not in booking_info or not booking_info["schedule_date"]:
+        incomplete_fields.append("schedule_date")
+    else:
+        add_date_if_invalid(booking_info["schedule_date"], incomplete_fields)
 
     add_time_if_invalid = lambda time_str, incomplete_fields: incomplete_fields.append("schedule_time") if is_time_invalid(time_str) else None
-    add_time_if_invalid(normalize_time_format(booking_info["schedule_time"]), incomplete_fields)
+    if "schedule_time" not in booking_info or not booking_info["schedule_time"]:
+        incomplete_fields.append("schedule_time")
+    else:
+        add_time_if_invalid(normalize_time_format(booking_info["schedule_time"]), incomplete_fields)
 
     return {
         **state,
@@ -183,8 +196,7 @@ async def node_save_booking(state: SharedState) -> SharedState:
             "booking_status": "confirmed",
             "booking_info": save_booking,
             "messages": [
-                AIMessage(content="Sucessfully booked a schedule"),
-                AIMessage(content=f"Here are the details newly book ed schedule: \n {save_booking}")
+                AIMessage(content=f"Sucessfully booked an appointment.\n\nHere are the details of booked schedule: \n\tName: {save_booking['name']}\n\tEmail: {save_booking['email']}\n\tSchedule Date: {save_booking['schedule_date']}\n\tSchedule Time: {save_booking['schedule_time']}")
             ]
         }
     else:

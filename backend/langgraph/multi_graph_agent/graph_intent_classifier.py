@@ -26,7 +26,7 @@ IMPORTANT: Read the user's message carefully. Are they GIVING you information or
 
 2. "bookings" → User wants to make/schedule an appointment
 3. "inquiring" → User asks about Canada migration
-4. "fallback" → Everything else, including questions about themselves
+4. "fallback" → Everything else, including questions about themselves or anything else that is not classified as identify or bookings or inquiring will be classified as fallback.  
 
 📌 NEVER classify as "identify" if the user is:
 - Asking "Who am I?"
@@ -45,7 +45,7 @@ IMPORTANT: Read the user's message carefully. Are they GIVING you information or
 "My name is Sarah" → identify
 
 📌 RESPONSE FORMAT:
-Return ONLY a string of intent/s separated by comma (,) without any spaces.
+Return ONLY a string of intent/s separated by comma (,) without any spaces. Do not return any other information besides  from the above options.
 """
 
 # Create the LCEL chain
@@ -70,6 +70,24 @@ async def node_intent_classifier(state: SharedState) -> SharedState:
 
     # Validation and fallback
     try:
+        updated_intent_result=[]
+        for intent in result_content:
+            if intent not in ["identify", "bookings", "inquiring", "fallback"]:
+               updated_intent_result.append("fallback")
+            else:
+                updated_intent_result.append(intent)
+        # Remove duplicates by converting to a set and back to a list
+        updated_intent_result = list(set(updated_intent_result))
+
+        # Define the priority order (highest priority first)
+        priority_order = ["identify", "inquiring", "bookings", "fallback"]
+
+        # Sort the list according to the priority
+        updated_intent_result.sort(
+            key=lambda x: priority_order.index(x) if x in priority_order else len(priority_order))
+
+        result_content = updated_intent_result
+
         if not isinstance(result_content, list) or not result_content:
             result_content = ["fallback"]
     except Exception as e:
