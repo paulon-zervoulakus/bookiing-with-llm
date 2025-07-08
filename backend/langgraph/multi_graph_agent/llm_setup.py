@@ -23,8 +23,15 @@ def setup_persistence(persistence_type="memory"):
         raise ValueError("persistence_type must be 'memory' or 'sqlite'")
 
 checkpointer = setup_persistence()
-base_llm = ChatOllama(model="mistral:latest", temperature=0)
-config: RunnableConfig = {"configurable": {"thread_id": "example_pau_history", "session_id": "example_pau_history"}}
+base_llm = ChatOllama(model="mistral:7b", temperature=0)
+# base_llm = ChatOllama(model="mistral:latest", temperature=0)
+# base_llm = ChatOllama(model="llama3-groq-tool-use:8b", temperature=0)
+config: RunnableConfig = {
+    "configurable": {
+        "thread_id": "example_pau_history",
+        "session_id": "example_pau_history"
+    }
+}
 
 # Your existing functions
 def node_rag_query(state: SharedState) -> list:
