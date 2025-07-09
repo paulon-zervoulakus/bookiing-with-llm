@@ -23,7 +23,8 @@ def setup_persistence(persistence_type="memory"):
         raise ValueError("persistence_type must be 'memory' or 'sqlite'")
 
 checkpointer = setup_persistence()
-base_llm = ChatOllama(model="mistral:7b", temperature=0)
+# base_llm = ChatOllama(model="mistral:7b", temperature=0)
+base_llm = ChatOllama(model="llama3.1:8b", temperature=0)
 # base_llm = ChatOllama(model="mistral:latest", temperature=0)
 # base_llm = ChatOllama(model="llama3-groq-tool-use:8b", temperature=0)
 config: RunnableConfig = {
