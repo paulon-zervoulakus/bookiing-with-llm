@@ -196,7 +196,7 @@ async def node_save_booking(state: SharedState) -> SharedState:
             "booking_status": "confirmed",
             "booking_info": save_booking,
             "messages": [
-                AIMessage(content=f"Sucessfully booked an appointment.\n\nHere are the details of booked schedule: \n\tName: {save_booking['name']}\n\tEmail: {save_booking['email']}\n\tSchedule Date: {save_booking['schedule_date']}\n\tSchedule Time: {save_booking['schedule_time']}")
+                AIMessage(content=f"Sucessfully booked an appointment.\n\nHere are the details of booked schedule: \nName: {save_booking['name']}\nEmail: {save_booking['email']}\nSchedule Date: {save_booking['schedule_date']}\nSchedule Time: {save_booking['schedule_time']}")
             ]
         }
     else:
