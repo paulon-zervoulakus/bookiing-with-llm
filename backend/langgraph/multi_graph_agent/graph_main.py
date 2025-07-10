@@ -45,10 +45,10 @@ async def route_by_intents(state: SharedState) -> SharedState:
     intent_list = state.get("intent")
 
     for intent in intent_list:        
-        if intent == "identify":
-            result = await graph_user_info_scraper.ainvoke(state, config)
-            state.update(result)
-        elif intent == "inquiring":
+        # if intent == "identify":
+        #     result = await graph_user_info_scraper.ainvoke(state, config)
+        #     state.update(result)
+        if intent == "inquiring":
             result = await graph_human_question.ainvoke(state, config)
             state.update(result)
         elif intent == "fallback":
@@ -61,32 +61,9 @@ async def route_by_intents(state: SharedState) -> SharedState:
     print(f"\n POST State: {state}")
     return state
 
-# async def end_collate(state: SharedState) -> SharedState:
-#     print(f"\n===== end collate =====")
-#     if "inquiring" in state["intent"]:
-#         # call summary for inquiry
-#         result = await graph_summary_inquiry.ainvoke(state, config)
-#         state.update(result)
-#     #
-#     # elif "bookings" in state["intent"]:
-#     #     result = await graph_summary_booking.ainvoke(state, config)
-#     #     state.update(result)
-#     # else:
-#     #     result = await graph_summary_fallback.ainvoke(state, config)
-#     #     state.update(result)
-#
-#     print(f"\n===== POST State: {state}")
-#     return state
-# --- Main Graph ---
-# class DefaultUser:
-#     name: str
-#     email: str
 
 def build_main_graph():
     graph = StateGraph(SharedState)
     graph.add_node("router", route_by_intents)
-    # graph.add_node("end_collate", end_collate)
-    # graph.add_edge("router", "end_collate")
     graph.set_entry_point("router")
-    # graph.set_finish_point("end_collate")
     return graph.compile(checkpointer=checkpointer)

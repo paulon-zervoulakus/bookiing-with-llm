@@ -25,7 +25,7 @@ async def post_llm_query(
         "input_message": req.query,
         "human_inquiry": "",
         "chunk_answer_from_inquiry": "",
-        "booking_status": "",
+        # "booking_status": "",
         "intent": []
     }
 

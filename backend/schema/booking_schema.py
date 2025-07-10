@@ -4,11 +4,13 @@ from datetime import datetime
 
 class BookingSchema(BaseModel):
     id: Optional[str] = None
-    name: str
-    email: str
-    schedule_date: str
-    schedule_time: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    schedule_date: Optional[str] = None
+    schedule_time: Optional[str] = None
     created_at: Optional[datetime] = None
+    booking_status: Optional[str] = None
+    error_message: Optional[str] = None
 
 class AppointmentCreateSchema(BaseModel):
     title: str

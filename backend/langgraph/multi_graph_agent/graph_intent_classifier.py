@@ -19,30 +19,22 @@ You are a strict intent classifier.
 
 IMPORTANT: Read the user's message carefully. Are they GIVING you information or ASKING for information?
 
-📌 INTENT DEFINITIONS:
-1. "identify" → User is GIVING/STATING their personal information (name, email, job, etc.)
-   - Examples: "I am John", "My name is Sarah", "I'm a doctor"
-   - NOT for questions like "Who am I?" or "What's my name?"
+INTENT DEFINITIONS:
+1. "bookings" → User wants to make/schedule an appointment or updating a booking information or retrieving booking information, everything there is for booking or appointment.
+2. "inquiring" → User asks about Canada migration, Canadian culture, living in Canada.
+3. "fallback" → Everything else that is not classified as bookings or inquiring regarding Canada migration or Canadian culture will be classified as fallback.  
 
-2. "bookings" → User wants to make/schedule an appointment
-3. "inquiring" → User asks about Canada migration
-4. "fallback" → Everything else, including questions about themselves or anything else that is not classified as identify or bookings or inquiring will be classified as fallback.  
+ONLY classify as "bookings" if the user is:
+- Telling you or asking you to schedule an appointment or update a booking or retrieve booking information.
 
-📌 NEVER classify as "identify" if the user is:
-- Asking "Who am I?"
-- Asking "What is my name?"
-- Asking any question about themselves
+EXAMPLES:
+What is my name? -> fallback
+Whats my booking email? -> bookings
+Who am I? -> fallback
+Book me a schedule tomorrow -> bookings
+What is the primary language of Canada? -> inquiring
+What is the primary language of Rusia? -> fallback
 
-📌 ONLY classify as "identify" if the user is:
-- Telling you their name
-- Sharing their profession
-- Providing personal details
-
-📌 EXAMPLES:
-"I'm John Smith" → identify
-"What is my name?" → fallback
-"Who am I?" → fallback
-"My name is Sarah" → identify
 
 📌 RESPONSE FORMAT:
 Return ONLY a string of intent/s separated by comma (,) without any spaces. Do not return any other information besides  from the above options.
@@ -80,7 +72,7 @@ async def node_intent_classifier(state: SharedState) -> SharedState:
         updated_intent_result = list(set(updated_intent_result))
 
         # Define the priority order (highest priority first)
-        priority_order = ["identify", "inquiring", "bookings", "fallback"]
+        priority_order = ["inquiring", "bookings", "fallback"]
 
         # Sort the list according to the priority
         updated_intent_result.sort(

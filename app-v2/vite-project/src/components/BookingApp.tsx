@@ -192,8 +192,9 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 				]);
 			}
 			setIsBotTyping(false);
+			const booking_status = data["booking_status"];
 
-			if (data["booking_status"] == "confirmed") {
+			if (booking_status.toUpperCase() == "CONFIRMED") {
 				await fetchBookings();
 			}
 			// }, 500);
