@@ -1,12 +1,12 @@
-import re
+"""This is the Booking graph"""
 import json
 import traceback
-from typing import Any, Dict, List, Literal
+
 from datetime import datetime
 from langgraph.graph import StateGraph
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage, ToolMessage
-from backend.langgraph.multi_graph_agent.states import SharedState
-from backend.langgraph.multi_graph_agent.llm_setup import checkpointer, base_llm
+from backend.langgraph.multi_graph_agent.states import SharedState, BookingInfoState
+from backend.langgraph.multi_graph_agent.llm_setup import checkpointer, base_llm, config
 from backend.database import SessionLocal
 from backend.services.booking_service import BookingService
 from backend.schema.booking_schema import BookingSchema
@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from email_validator import validate_email, EmailNotValidError
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
-from pydantic import BaseModel
+
 
 @tool
 def extract_booking_information(name: str, email: str, schedule_date: str, schedule_time: str,
@@ -41,12 +41,12 @@ def extract_booking_information(name: str, email: str, schedule_date: str, sched
     # Get current booking info or empty dict
     current_info = current_booking_info or {}
 
-    return {
-        "name": name if name else current_info.get("name", ""),
-        "email": email if email else current_info.get("email", ""),
-        "schedule_date": schedule_date if schedule_date else current_info.get("schedule_date", ""),
-        "schedule_time": schedule_time if schedule_time else current_info.get("schedule_time", "")
-    }
+    return BookingSchema(
+        name = name if name else current_info.get("name", ""),
+        email = email if email else current_info.get("email", ""),
+        schedule_date = schedule_date if schedule_date else current_info.get("schedule_date", ""),
+        schedule_time = schedule_time if schedule_time else current_info.get("schedule_time", "")
+    )
 
 #@tool
 # def save_booking_schedule(booking_info: BookingSchema) -> BookingSchema:
@@ -87,13 +87,14 @@ You are a precise and intelligent booking assistant whose primary role is to acc
 
 GENERAL RULE: Your responsibility is to identify whether the user's message falls into one of these categories:
 1. GET 
-    - When user is asking for the booking details.
+    - When user is asking for the his/her booking information details.
 2. UPDATE 
-    - When users are providing or updating details like name, email, date, or time
+    - When user is providing or updating details like name, email, date, or time
 3. SAVING 
     - When users explicitly request to save or proceed with their booking.
-
-
+4. BOOKING_CLARIFICATION 
+    - Select this if the user’s message is about confusion, uncertainty, or a request for help or clarifications regarding any part of the booking process. This includes messages where the user's intention about booking is unclear, ambiguous, or they explicitly ask for guidance or explanation related to booking.
+    
 CLASSIFICATION: Guidelines to follow
 - Focus only on the semantic meaning of the message, not on formatting or style
 - Look for specific booking-related keywords and phrases
@@ -107,8 +108,8 @@ HERE IS THE ACTUAL {{booking_form}}:
 {booking_form}
 
 When analyzing a message, provide your classification with a brief justification of your selected category.
-You will respond with one of the options only, with priority to the sequence below:
-GET, UPDATE, SAVING
+You will respond with one of the options only:
+GET, UPDATE, SAVING, BOOKING_CLARIFICATION
 <|end_of_system|>""")
 
     llm_response = create_react_agent (
@@ -133,6 +134,8 @@ GET, UPDATE, SAVING
                 booking_status = "UPDATE"
             elif "SAVING" in content:
                 booking_status = "SAVING"
+            else:
+                booking_status = "BOOKING_CLARIFICATION"
 
         return {
             **state,
@@ -141,6 +144,7 @@ GET, UPDATE, SAVING
     except Exception as e:
         print(f"🚨 Error processing LLM response: {str(e)}")
         return {**state, "messages": [AIMessage(content="Sorry, I encountered an error.")]}
+
 
 async def node_get_booking_information(state: SharedState) -> SharedState:
     """This node is used to extract the booking information from the existing state."""
@@ -160,7 +164,7 @@ async def node_update_form(state: SharedState) -> SharedState:
     """This node is used to update the booking information"""
     print(f"\n- node_update_form")
 
-    # Get current date and time
+    # Get current-date and time
     current_datetime = datetime.now()
     current_date = current_datetime.strftime("%Y-%m-%d")
     current_time = current_datetime.strftime("%I:%M %p")
@@ -226,12 +230,12 @@ Example response format:
 
         extracted_booking_info = json.loads(llm_response['messages'][-1].content)
 
-        new_booking_info = {
-            "name": extracted_booking_info.get("name") if extracted_booking_info.get("name","") and extracted_booking_info.get("name") != "" else state.get("booking_info", {}).get("name", ""),
-            "email": extracted_booking_info.get("email") if extracted_booking_info.get("email","") and extracted_booking_info.get("name") != "" else state.get("booking_info", {}).get("email", ""),
-            "schedule_date": extracted_booking_info.get("schedule_date") if extracted_booking_info.get("schedule_date","") and extracted_booking_info.get("schedule_date") != "" else state.get("booking_info", {}).get("schedule_date", ""),
-            "schedule_time": extracted_booking_info.get("schedule_time") if extracted_booking_info.get("schedule_time","") and extracted_booking_info.get("schedule_time") != "" else state.get("booking_info", {}).get("schedule_time", "")
-        }
+        new_booking_info =  BookingInfoState(
+            name = extracted_booking_info.get("name") if extracted_booking_info.get("name","") and extracted_booking_info.get("name") != "" else state.get("booking_info", {}).get("name", ""),
+            email = extracted_booking_info.get("email") if extracted_booking_info.get("email","") and extracted_booking_info.get("name") != "" else state.get("booking_info", {}).get("email", ""),
+            schedule_date = extracted_booking_info.get("schedule_date") if extracted_booking_info.get("schedule_date","") and extracted_booking_info.get("schedule_date") != "" else state.get("booking_info", {}).get("schedule_date", ""),
+            schedule_time = extracted_booking_info.get("schedule_time") if extracted_booking_info.get("schedule_time","") and extracted_booking_info.get("schedule_time") != "" else state.get("booking_info", {}).get("schedule_time", "")
+        )
         booking_status = state.get("booking_status", "")
         missing_fields = []
         for k, v in new_booking_info.items():
@@ -279,11 +283,11 @@ def save_booking_schedule(booking_info: dict) -> dict:
     # print(f"\nsave_booking_schedule:\n{booking_info["name"]}\n{booking_info["email"]}\n{booking_info["schedule_date"]}\n{booking_info["schedule_time"]}")
     with get_booking_service() as booking_service:
         try:
-            booking_dto = BookingModel(
-                name=booking_info["name"],
-                email=booking_info["email"],
-                schedule_date=booking_info["schedule_date"],
-                schedule_time=booking_info["schedule_time"]
+            booking_dto = BookingSchema(
+                name = booking_info["name"],
+                email = booking_info["email"],
+                schedule_date = booking_info["schedule_date"],
+                schedule_time = booking_info["schedule_time"]
             )
 
             new_booking = booking_service.create_booking(booking_dto)
@@ -328,14 +332,14 @@ async def node_saving(state: SharedState) -> SharedState:
         return {
             **state,
             "booking_status": "CONFIRMED",
-            "booking_info": {
-                "name": booking_form["name"],
-                "email": booking_form["email"],
-                "schedule_date": booking_form["schedule_date"],
-                "schedule_time": booking_form["schedule_time"],
-                "id": result.id if hasattr(result, 'id') else None,
-                "booking_status": result.booking_status if hasattr(result, 'booking_status') else "confirmed"
-            },
+            "booking_info": BookingInfoState(
+                name = booking_form["name"],
+                email = booking_form["email"],
+                schedule_date = booking_form["schedule_date"],
+                schedule_time = booking_form["schedule_time"],
+                id = result.id if hasattr(result, 'id') else None,
+                booking_status = result.booking_status if hasattr(result, 'booking_status') else "confirmed"
+            ),
             "messages": [AIMessage(
                 content=f"Successfully booked an appointment.\n\nHere are the details of your booked schedule: \nName: {booking_form['name']}\nEmail: {booking_form['email']}\nSchedule Date: {booking_form['schedule_date']}\nSchedule Time: {booking_form['schedule_time']}")]
         }
@@ -348,7 +352,44 @@ async def node_saving(state: SharedState) -> SharedState:
                 AIMessage(content=f"Sorry, I encountered an error while trying to save your booking: {str(e)}")]
         }
 
+
+async def node_clarification(state: SharedState) -> SharedState:
+    """This node is used to handle the clarification of the booking information."""
+    print(f"\n- node_clarification")
+    booking_form = {
+        "name": state.get("booking_info", {}).get("name", "[missing]"),
+        "email": state.get("booking_info", {}).get("email", "[missing]"),
+        "schedule_date": state.get("booking_info", {}).get("schedule_date", "[missing]"),
+        "schedule_time": state.get("booking_info", {}).get("schedule_time", "[missing]")
+    }
+    system_msg = SystemMessage(content=f"""<|begin_of_system|>
+Your a precise and intelligent booking assistant whose primary role is to clarify the users input.
+You will consolidate the user's input versus the existing booking information and intents of the user message.
+
+HERE IS THE ACTUAL {{booking_form}}:
+{booking_form}
+
+You will respond as a proffesional booking assistant, you will guide the user to provide the correct booking information.
+You will provide the existing booking information if it is available and it is needed.
+<|end_of_system|>""")
+    agent = create_react_agent(
+        model=base_llm,
+        tools=[],
+        prompt=system_msg
+    )
+    llm_response = await agent.ainvoke({
+        "messages": [{"role": "user", "content": state.get("input_message", "")}]
+    })
+    response = llm_response['messages'][-1].content
+
+    return {
+        **state,
+        "booking_status": "BOOKING_CLARIFICATION",
+        "messages": [AIMessage(content=response)]
+    }
+
 def step_decision_making(state):
+    """Step decision-making function for the graph_process_booking agent."""
     if state.get("booking_status") == "GET":
         return "GET"
     elif state.get("booking_status") == "UPDATE":
@@ -356,7 +397,7 @@ def step_decision_making(state):
     elif state.get("booking_status") == "SAVING":
         return "SAVING"
     else:
-        return "UNKNOWN"
+        return "BOOKING_CLARIFICATION"
 
 graph_process_booking = (
     StateGraph(SharedState)
@@ -364,6 +405,7 @@ graph_process_booking = (
     .add_node("node_get_booking_information", node_get_booking_information)
     .add_node("node_update_form", node_update_form)
     .add_node("node_saving", node_saving)
+    .add_node("node_clarification", node_clarification)
     .add_conditional_edges(
         "node_booking",
         step_decision_making,
@@ -371,6 +413,7 @@ graph_process_booking = (
             "GET": "node_get_booking_information",
             "UPDATE": "node_update_form",
             "SAVING": "node_saving",
+            "BOOKING_CLARIFICATION": "node_clarification"
         }
     )
     .set_entry_point("node_booking")

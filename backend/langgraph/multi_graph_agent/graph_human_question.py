@@ -16,13 +16,7 @@ async def node_human_question_scraper(state: SharedState) -> SharedState:
     system_msg = SystemMessage(content="""
 You are a Migration Inquiry Analyzer with RAG decision capabilities.
 
-FIRST, identify whether the user's message contains a question or inquiry about immigration or migration to Canada.
-
-If NO inquiry is detected:
-- Respond with an empty string: ""
-
-If YES, an inquiry is detected:
-- CLASSIFY the question as either:
+CLASSIFICATION:
   1. GENERAL KNOWLEDGE: Basic conceptual questions about immigration processes, general explanations, or "what is" type questions.
   2. SPECIFIC FACTS: Questions about requirements, documents, processing times, fees, eligibility criteria, specific procedures, or any detailed factual information.
 

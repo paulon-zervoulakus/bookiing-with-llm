@@ -6,19 +6,22 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph import add_messages
 
 def merge_booking(left: Any, right: Any):
+    """This function merges two bookings"""
     if not right:
         return left
     return {**left, **right}
 
 class BookingInfoState(TypedDict):
+    """BookingInfoState Schema"""
     name: Optional[str]
     email: Optional[str]
-    schedule_date: Optional[str]
-    schedule_time: Optional[str]
+    schedule_date: Optional[str] = None
+    schedule_time: Optional[str] = None
     profession: Optional[str] = None
     booking_id: Optional[int] = 0    
 
 class SharedState(TypedDict, total=False):
+    """SharedState Schema"""
     intent: Annotated[List[str], lambda prev, new: new if new is not None else prev]
     input_message: Annotated[Optional[str], lambda prev, new: new] # This is a raw string from human
     human_inquiry: Annotated[Optional[str], lambda prev, new: new] # This is a raw string from human

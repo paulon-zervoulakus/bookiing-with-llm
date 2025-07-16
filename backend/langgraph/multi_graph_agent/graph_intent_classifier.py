@@ -1,31 +1,44 @@
-import json
-from typing import Literal, Optional
-from pydantic import BaseModel
+"""This is the Intent Classifier graph"""
 from datetime import datetime
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import create_react_agent
-from typing import Any, List
 from langchain.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_core.messages import AIMessage
+from langchain_core.tools import tool
 from backend.langgraph.multi_graph_agent.llm_setup import base_llm
 from backend.langgraph.multi_graph_agent.states import SharedState
 from backend.langgraph.multi_graph_agent.llm_setup import checkpointer, config
+from langchain_core.output_parsers import StrOutputParser
 
-def prompt_modifier():
-    return """
+# @tool
+def tool_last_ai_message(state: SharedState) -> str:
+    """Return the last AI message in the state"""
+    if state.get("messages") and len(state.get("messages")) > 0:
+        ai_messages = [msg for msg in state.get("messages") if isinstance(msg, AIMessage)]
+        if ai_messages:
+            return ai_messages[-1].content
+        else:
+            return ""
+    else:
+        return ""
+
+
+def prompt_modifier(ai_last_response):
+    """Prompt modifier is used for SystemMessage."""
+    return f"""
 You are a strict intent classifier. 
 
 IMPORTANT: Read the user's message carefully. Are they GIVING you information or ASKING for information?
 
+AWARENESS: You always need to consider the previews AI Response, use this conversation history to identify if the message is an answer to the previews conversation.
+
 INTENT DEFINITIONS:
-1. "bookings" → User wants to make/schedule an appointment or updating a booking information or retrieving booking information, everything there is for booking or appointment.
-2. "inquiring" → User asks about Canada migration, Canadian culture, living in Canada.
-3. "fallback" → Everything else that is not classified as bookings or inquiring regarding Canada migration or Canadian culture will be classified as fallback.  
+1. "bookings" → User wants to make/schedule an appointment interview or updating a booking information or retrieving booking information, everything there is for booking, appointment, schedule or interview.
+2. "inquiring" → User asks about Canada migration, Canadian culture, living in Canada, Documents needed for application to migrate in Canada, everything their is to know about Canada.
+3. "fallback" → Everything else that is not classified as bookings or inquiring will be classified as fallback.  
 
 ONLY classify as "bookings" if the user is:
-- Telling you or asking you to schedule an appointment or update a booking or retrieve booking information.
+- Telling you or asking you to schedule an appointment interview or update a booking or retrieve booking information.
 
 EXAMPLES:
 What is my name? -> fallback
@@ -33,32 +46,57 @@ Whats my booking email? -> bookings
 Who am I? -> fallback
 Book me a schedule tomorrow -> bookings
 What is the primary language of Canada? -> inquiring
-What is the primary language of Rusia? -> fallback
+What is the primary language of Russia? -> fallback
+What are the requirements for the interview? -> bookings
 
+PREVIEWS AI RESPONSE:
+{ai_last_response}
 
-📌 RESPONSE FORMAT:
-Return ONLY a string of intent/s separated by comma (,) without any spaces. Do not return any other information besides  from the above options.
+RESPONSE FORMAT:
+Return ONLY one of the intent option above. Do not return any other information besides  from the above options given.
 """
 
-# Create the LCEL chain
-prompt = PromptTemplate(
-    input_variables=["message"],
-    template=prompt_modifier() + "\n\nInput: {message}\n→"
-)
+# # Create the LCEL chain
+# prompt = PromptTemplate(
+#     input_variables=["message","tool_last_ai_message"],
+#     template=prompt_modifier() + "\n\nInput: {message}\n→"
+# )
 
 # Modern LCEL approach
-intent_chain = prompt | base_llm | StrOutputParser()
+# intent_chain = prompt | base_llm | tool_last_ai_message | StrOutputParser()
+
 
 async def node_intent_classifier(state: SharedState) -> SharedState:
+    """Node intent classifier."""
     print(f"\n============================= node_intent_classifier")
 
     print(f"\nTime check\n - before llm: node_intent_classifier")
     start_time = datetime.now()
-    
-    # Invoke the LCEL chain
-    result = await intent_chain.ainvoke({"message": state["input_message"]})
-    
-    result_content = [item.strip() for item in result.split(",")]
+
+    ai_last_response = tool_last_ai_message({"state": state})
+
+    prompt = PromptTemplate(
+        input_variables=["message","ai_last_response"],
+        template=prompt_modifier(ai_last_response) + "\n\nInput: {message}\n→"
+    )
+
+    intent_chain = prompt | base_llm | StrOutputParser()
+
+    llm_result = await intent_chain.ainvoke({
+        "message": state["input_message"]
+    })
+    # agent_intent_classifier = create_react_agent(
+    #     model=base_llm,
+    #     tools=[tool_last_ai_message],
+    #     prompt=prompt_modifier(),
+    #     checkpointer=checkpointer
+    # )
+
+    # llm_result = await agent_intent_classifier.ainvoke({"messages": [{"role": "user", "content": state.get("input_message", "")}]}, config)
+
+    # ai_messages = [msg.content for msg in llm_result["messages"] if isinstance(msg, AIMessage)]
+
+    result_content = [item.strip() for item in llm_result.split(",")]
 
     # Validation and fallback
     try:

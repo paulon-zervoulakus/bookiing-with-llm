@@ -30,4 +30,9 @@ async def post_llm_query(
     }
 
     response = await graph.ainvoke(state, config)
-    return {"ai_response":response["messages"], "booking_status":response["booking_status"]}
+    booking_status = response["booking_status"] if "booking_status" in response else ""
+
+    return {
+        "ai_response" : response["messages"],
+        "booking_status":booking_status
+    }

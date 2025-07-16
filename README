@@ -1,0 +1,65 @@
+## Project Overview
+The **Generative AI Immigration and Booking Scheduler** is an intelligent, multi-agent conversational system designed to streamline immigration-related consultations and appointment scheduling for Canadian migration services. This sophisticated application combines natural language processing, document understanding, and automated booking management to provide a seamless user experience.
+## Core Architecture
+### 1. **Multi-Agent LangGraph Framework**
+The system employs a sophisticated multi-agent architecture built on LangGraph, featuring:
+- **Intent Classification Agent**: Intelligently routes user queries to appropriate specialized agents
+- **Immigration Information Agent**: Provides detailed guidance on Canadian migration processes
+- **Booking Management Agent**: Handles appointment scheduling with comprehensive form management
+- **Fallback Agent**: Manages out-of-scope queries gracefully
+
+### 2. **Intelligent Workflow Orchestration**
+The main graph orchestrator () coordinates between different specialized agents:
+- **Dynamic Intent Routing**: Automatically classifies user messages into categories (inquiring, bookings, fallback)
+- **Context-Aware Processing**: Maintains conversation history and user state across interactions
+- **Parallel Processing**: Handles multiple intents simultaneously when applicable
+
+### 3. **Advanced Booking System**
+The booking workflow implements a comprehensive state machine with multiple stages:
+- **Information Extraction**: Automatically extracts booking details (name, email, date, time) from natural language
+- **Form Validation**: Ensures all required fields are captured before proceeding
+- **Confirmation Process**: Implements a multi-step confirmation workflow
+- **Database Integration**: Persistent storage with SQLite and SQLAlchemy ORM
+
+### 4. **RAG-Enhanced Immigration Knowledge Base**
+- **Document Processing**: Utilizes ChromaDB for vector storage of Canadian immigration documents
+- **Semantic Search**: Implements sentence transformers for intelligent document retrieval
+- **Contextual Responses**: Provides accurate, citation-backed answers to immigration queries
+
+## Key Features
+### **Intelligent Conversation Management**
+- Multi-turn conversation handling with context preservation
+- Natural language understanding for complex scheduling requests
+- Automatic date/time interpretation (handles "tomorrow", "next week", etc.)
+
+### **Robust Data Management**
+- **Database Layer**: SQLAlchemy models for booking and user management
+- **Repository Pattern**: Clean separation of data access logic
+- **Service Layer**: Business logic encapsulation for booking operations
+
+### **Advanced NLP Capabilities**
+- **Intent Classification**: Precise categorization of user intents with fallback handling
+- **Information Extraction**: Sophisticated parsing of booking details from conversational input
+- **Email Validation**: Built-in validation for user contact information
+
+### **User Experience Features**
+- **Form State Management**: Maintains partial booking information across conversation turns
+- **Error Handling**: Comprehensive error management with user-friendly messages
+- **Confirmation Workflows**: Multi-step booking confirmation process
+
+## Technical Implementation
+### **Technology Stack**
+- **Backend**: Python with FastAPI framework
+- **AI/ML**: LangChain, LangGraph for agent orchestration
+- **Database**: SQLite with SQLAlchemy ORM
+- **Vector Storage**: ChromaDB for document embeddings
+- **NLP**: Sentence Transformers for semantic understanding
+
+### **Workflow Implementation**
+1. **Message Processing**: User input is processed through intent classification
+2. **Agent Routing**: Based on intent, messages are routed to specialized agents
+3. **Context Management**: Conversation state is maintained across interactions
+4. **Response Generation**: AI agents generate contextually appropriate responses
+5. **Action Execution**: Booking confirmations trigger database operations
+
+This project represents a sophisticated blend of conversational AI, document understanding, and business process automation, specifically tailored for immigration consultation services. The architecture ensures scalability, maintainability, and a superior user experience through intelligent automation and natural language interaction.
