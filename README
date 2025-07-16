@@ -1,65 +1,103 @@
-## Project Overview
-The **Generative AI Immigration and Booking Scheduler** is an intelligent, multi-agent conversational system designed to streamline immigration-related consultations and appointment scheduling for Canadian migration services. This sophisticated application combines natural language processing, document understanding, and automated booking management to provide a seamless user experience.
-## Core Architecture
-### 1. **Multi-Agent LangGraph Framework**
-The system employs a sophisticated multi-agent architecture built on LangGraph, featuring:
-- **Intent Classification Agent**: Intelligently routes user queries to appropriate specialized agents
-- **Immigration Information Agent**: Provides detailed guidance on Canadian migration processes
-- **Booking Management Agent**: Handles appointment scheduling with comprehensive form management
-- **Fallback Agent**: Manages out-of-scope queries gracefully
+# Generative AI Immigration and Booking Scheduler
 
-### 2. **Intelligent Workflow Orchestration**
-The main graph orchestrator () coordinates between different specialized agents:
-- **Dynamic Intent Routing**: Automatically classifies user messages into categories (inquiring, bookings, fallback)
-- **Context-Aware Processing**: Maintains conversation history and user state across interactions
-- **Parallel Processing**: Handles multiple intents simultaneously when applicable
+## 📌 Project Overview
 
-### 3. **Advanced Booking System**
-The booking workflow implements a comprehensive state machine with multiple stages:
-- **Information Extraction**: Automatically extracts booking details (name, email, date, time) from natural language
-- **Form Validation**: Ensures all required fields are captured before proceeding
-- **Confirmation Process**: Implements a multi-step confirmation workflow
-- **Database Integration**: Persistent storage with SQLite and SQLAlchemy ORM
+The **Generative AI Immigration and Booking Scheduler** is an intelligent, multi-agent conversational system designed to streamline immigration-related consultations and appointment scheduling for Canadian migration services.
 
-### 4. **RAG-Enhanced Immigration Knowledge Base**
-- **Document Processing**: Utilizes ChromaDB for vector storage of Canadian immigration documents
-- **Semantic Search**: Implements sentence transformers for intelligent document retrieval
-- **Contextual Responses**: Provides accurate, citation-backed answers to immigration queries
+This sophisticated application combines natural language processing, document understanding, and automated booking management to provide a seamless user experience.
 
-## Key Features
-### **Intelligent Conversation Management**
-- Multi-turn conversation handling with context preservation
-- Natural language understanding for complex scheduling requests
-- Automatic date/time interpretation (handles "tomorrow", "next week", etc.)
+---
 
-### **Robust Data Management**
-- **Database Layer**: SQLAlchemy models for booking and user management
-- **Repository Pattern**: Clean separation of data access logic
-- **Service Layer**: Business logic encapsulation for booking operations
+## ⚙️ Core Architecture
 
-### **Advanced NLP Capabilities**
-- **Intent Classification**: Precise categorization of user intents with fallback handling
-- **Information Extraction**: Sophisticated parsing of booking details from conversational input
-- **Email Validation**: Built-in validation for user contact information
+### 1. Multi-Agent LangGraph Framework
 
-### **User Experience Features**
-- **Form State Management**: Maintains partial booking information across conversation turns
-- **Error Handling**: Comprehensive error management with user-friendly messages
-- **Confirmation Workflows**: Multi-step booking confirmation process
+The system uses a modular architecture built on **LangGraph**, featuring:
 
-## Technical Implementation
-### **Technology Stack**
-- **Backend**: Python with FastAPI framework
-- **AI/ML**: LangChain, LangGraph for agent orchestration
-- **Database**: SQLite with SQLAlchemy ORM
-- **Vector Storage**: ChromaDB for document embeddings
-- **NLP**: Sentence Transformers for semantic understanding
+- **Intent Classification Agent** — Routes user queries to appropriate agents.
+- **Immigration Information Agent** — Provides guidance on Canadian migration processes.
+- **Booking Management Agent** — Handles appointment scheduling and form workflows.
+- **Fallback Agent** — Gracefully manages out-of-scope queries.
 
-### **Workflow Implementation**
-1. **Message Processing**: User input is processed through intent classification
-2. **Agent Routing**: Based on intent, messages are routed to specialized agents
-3. **Context Management**: Conversation state is maintained across interactions
-4. **Response Generation**: AI agents generate contextually appropriate responses
-5. **Action Execution**: Booking confirmations trigger database operations
+---
 
-This project represents a sophisticated blend of conversational AI, document understanding, and business process automation, specifically tailored for immigration consultation services. The architecture ensures scalability, maintainability, and a superior user experience through intelligent automation and natural language interaction.
+### 2. Intelligent Workflow Orchestration
+
+The main graph orchestrator coordinates the specialized agents:
+
+- **Dynamic Intent Routing** — Classifies messages into categories: inquiries, bookings, or fallback.
+- **Context-Aware Processing** — Maintains history and user state across sessions.
+- **Parallel Processing** — Supports handling of multiple intents concurrently.
+
+---
+
+### 3. Advanced Booking System
+
+Implements a structured booking state machine:
+
+- **Information Extraction** — Extracts details like name, email, date, and time from natural language.
+- **Form Validation** — Ensures all required data is collected before proceeding.
+- **Confirmation Workflow** — Guides users through a multi-step confirmation process.
+- **Database Integration** — Uses SQLite and SQLAlchemy for persistent data storage.
+
+---
+
+### 4. RAG-Enhanced Immigration Knowledge Base
+
+- **Document Processing** — ChromaDB stores vectorized immigration documents.
+- **Semantic Search** — Powered by Sentence Transformers for smart retrieval.
+- **Contextual Responses** — Provides accurate, citation-backed answers.
+
+---
+
+## ✨ Key Features
+
+### 🧠 Intelligent Conversation Management
+
+- Multi-turn conversation handling
+- Context preservation across turns
+- Date/time recognition (e.g., "tomorrow", "next week")
+
+### 💾 Robust Data Management
+
+- SQLAlchemy-based models for users and bookings
+- Repository pattern for clean data access
+- Service layer for encapsulated business logic
+
+### 🗣️ Advanced NLP Capabilities
+
+- Intent classification with fallback handling
+- Extraction of structured info from free-form input
+- Email and date/time validation
+
+### 🎯 User Experience Features
+
+- Form state management across steps
+- Friendly error handling
+- Multi-step confirmation workflows
+
+---
+
+## 🧪 Technical Implementation
+
+### 🛠️ Technology Stack
+
+- **Backend**: Python + FastAPI
+- **AI/ML**: LangChain + LangGraph
+- **Database**: SQLite + SQLAlchemy
+- **Vector Store**: ChromaDB
+- **NLP Models**: Sentence Transformers
+
+### 🔄 Workflow Overview
+
+1. **Message Intake** — Input routed through intent classifier.
+2. **Agent Selection** — Intent determines which agent handles the message.
+3. **Context Management** — Maintains state during conversation flow.
+4. **Response Generation** — Agents generate appropriate replies.
+5. **Action Execution** — Booking actions persist data to the database.
+
+---
+
+## 📎 Summary
+
+This project showcases a robust integration of **conversational AI**, **document understanding**, and **workflow automation** — tailored for Canadian immigration services. The architecture prioritizes scalability, maintainability, and user satisfaction through intelligent, real-time interaction.

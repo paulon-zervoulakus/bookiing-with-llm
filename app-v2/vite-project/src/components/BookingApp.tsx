@@ -92,13 +92,6 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 			});
 			const newBooking = await response.json();
 
-			// // Mock API call for now
-			// const newBooking: Booking = {
-			//   id: Date.now(),
-			//   ...formData,
-			//   created_at: new Date().toISOString()
-			// };
-
 			setBookings([newBooking, ...bookings]);
 			setFormData({
 				name: user?.name || "",
@@ -113,7 +106,7 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 				...prev,
 				{
 					type: "ai",
-					text: `Great! I've created your booking for ${formData.name} on ${formData.schedule_date} at ${formData.schedule_time}.`,
+					text: `Great! You've created booking for ${formData.name} on ${formData.schedule_date} at ${formData.schedule_time}.`,
 				},
 			]);
 		} catch (err) {
@@ -166,20 +159,6 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 			});
 			const data = await response.json();
 
-			// Mock chat response for now
-			// let botResponse = "I'm here to help with your bookings!";
-
-			// if (userMessage.toLowerCase().includes('create') || userMessage.toLowerCase().includes('book')) {
-			//   botResponse = "To create a new booking, please fill out the form on the left with the required details: name, email, date, and time.";
-			// } else if (userMessage.toLowerCase().includes('list') || userMessage.toLowerCase().includes('show')) {
-			//   botResponse = `You currently have ${bookings.length} booking(s). You can see them all in the booking list above.`;
-			// } else if (userMessage.toLowerCase().includes('help')) {
-			//   botResponse = "I can help you create bookings, view your existing bookings, or answer questions about the platform. What would you like to do?";
-			// } else if (userMessage.toLowerCase().includes('delete') || userMessage.toLowerCase().includes('cancel')) {
-			//   botResponse = "To delete a booking, click the red 'Delete' button next to any booking in your list above.";
-			// }
-			console.log(data["ai_response"]);
-			// setTimeout(() => {
 			if (data["ai_response"][data["ai_response"].length - 1]["type"] == "ai") {
 				setMessages((prev) => [
 					...prev,
@@ -197,7 +176,6 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 			if (booking_status.toUpperCase() == "CONFIRMED") {
 				await fetchBookings();
 			}
-			// }, 500);
 		} catch (err) {
 			setMessages((prev) => [
 				...prev,

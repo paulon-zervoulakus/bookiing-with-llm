@@ -1,5 +1,4 @@
-# auth_routes.py - Authentication routes
-import os
+""" Authentication routes"""
 from backend.utils.authenticationUtils import AuthUser, get_current_user, verify_google_token, create_jwt_token
 from fastapi import APIRouter, Depends, HTTPException, status
 from backend.schema.auth_schema import (
@@ -20,6 +19,7 @@ async def google_auth(
     auth_request: GoogleAuthRequestSchema,
     db: Session = Depends(get_db)
 ):
+    """Google OAuth authentication"""
     try:
         # Get the token from the request body
         token = auth_request.credential
@@ -39,9 +39,6 @@ async def google_auth(
         name = user_info['name']
         picture = user_info.get('picture')
 
-
-        #Assuming you have a database function to find or create users
-        # This would be implemented according to your database model
         user_repository = UserRepository(db)
         user = user_repository.find_by_google_id(user_id)
 
