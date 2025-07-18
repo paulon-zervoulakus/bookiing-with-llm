@@ -20,7 +20,7 @@ export interface Booking {
 }
 
 export interface Message {
-	type: "human" | "ai";
+	type: "human" | "ai" | "buffering";
 	text: string;
 }
 

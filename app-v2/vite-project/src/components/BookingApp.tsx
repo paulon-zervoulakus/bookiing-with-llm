@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { User, Booking, Message } from '../types';
+import React, { useState, useEffect, useRef } from "react";
+import { User, Booking, Message } from "../types";
 
 interface BookingAppProps {
-  user: User;
-  onLogout: () => void;
+	user: User;
+	onLogout: () => void;
 }
 
 const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
@@ -21,10 +21,14 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 			text: `Hello ${user?.name}! I'm your booking assistant. How can I help you today?`,
 		},
 	]);
+	const [streamingMessage, setStreamingMessage] = useState("");
+
 	const [chatInput, setChatInput] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
+	const [bookingStatus, setBookingStatus] = useState("");
+	const abortControllerRef = useRef<AbortController | null>(null);
 
 	useEffect(() => {
 		fetchBookings();
@@ -32,7 +36,6 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 
 	const fetchBookings = async () => {
 		try {
-			// Replace with your actual API endpoint
 			const response = await fetch("http://localhost:8000/api/appointments", {
 				method: "GET",
 				headers: {
@@ -41,27 +44,6 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 			});
 			const data = await response.json();
 			setBookings(data);
-
-			// // Mock data for now
-			// const mockBookings: Booking[] = [
-			//   {
-			//     id: 1,
-			//     name: 'John Doe',
-			//     email: 'john@example.com',
-			//     schedule_date: '2025-07-15',
-			//     schedule_time: '10:00',
-			//     created_at: new Date().toISOString()
-			//   },
-			//   {
-			//     id: 2,
-			//     name: 'Jane Smith',
-			//     email: 'jane@example.com',
-			//     schedule_date: '2025-07-16',
-			//     schedule_time: '14:30',
-			//     created_at: new Date().toISOString()
-			//   }
-			// ];
-			// setBookings(mockBookings);
 		} catch (err) {
 			setError("Failed to fetch bookings");
 		}
@@ -81,7 +63,6 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 		setSuccess("");
 
 		try {
-			// Replace with your actual API endpoint
 			const response = await fetch("http://localhost:8000/api/appointments", {
 				method: "POST",
 				headers: {
@@ -101,7 +82,6 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 			});
 			setSuccess("Booking created successfully!");
 
-			// Add success message to chat
 			setMessages((prev) => [
 				...prev,
 				{
@@ -118,7 +98,6 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 
 	const handleDelete = async (bookingId: string) => {
 		try {
-			// Replace with your actual API endpoint
 			const response = await fetch(
 				`http://localhost:8000/api/appointments/${bookingId}`,
 				{
@@ -138,6 +117,7 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 		}
 	};
 
+	// Updated streaming chat handler
 	const handleChatSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!chatInput.trim()) return;
@@ -146,47 +126,226 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 		setMessages((prev) => [...prev, { type: "human", text: userMessage }]);
 		setChatInput("");
 		setIsBotTyping(true);
+		setBookingStatus("");
+
+		// Cancel any ongoing request
+		if (abortControllerRef.current) {
+			abortControllerRef.current.abort();
+		}
+
+		abortControllerRef.current = new AbortController();
 
 		try {
-			// Replace with your actual chatbot API
-			const response = await fetch("http://localhost:8000/api/bot/agentic", {
+			const response = await fetch("http://localhost:8000/api/bot/ai-stream", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${localStorage.getItem("booking_token")}`,
 				},
 				body: JSON.stringify({ query: userMessage }),
+				signal: abortControllerRef.current.signal,
 			});
-			const data = await response.json();
 
-			if (data["ai_response"][data["ai_response"].length - 1]["type"] == "ai") {
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const reader = response.body?.getReader();
+			if (!reader) {
+				throw new Error("Response body is not readable");
+			}
+
+			const decoder = new TextDecoder();
+			let buffer = "";
+			// let currentAiMessage = "";
+
+			while (true) {
+				const { done, value } = await reader.read();
+
+				if (done) break;
+
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split("\n");
+				buffer = lines.pop() || "";
+
+				for (const line of lines) {
+					if (line.startsWith("data: ")) {
+						const jsonData = line.slice(6); // Remove 'data: ' prefix
+						try {
+							const data = JSON.parse(jsonData);
+							console.log(data);
+							if (data.type === "update") {
+								handleStreamUpdate(data.data.short_message);
+							} else if (data.type === "final") {
+								handleStreamFinal(data);
+							}
+						} catch (error) {
+							console.error("Error parsing JSON:", error);
+						}
+					}
+				}
+			}
+
+			setIsBotTyping(false);
+		} catch (err) {
+			if ((err as Error).name !== "AbortError") {
+				console.error("Streaming error:", err);
 				setMessages((prev) => [
 					...prev,
 					{
 						type: "ai",
-						text: data["ai_response"][data["ai_response"].length - 1][
-							"content"
-						],
+						text: "Sorry, I encountered an error. Please try again.",
 					},
 				]);
 			}
 			setIsBotTyping(false);
-			const booking_status = data["booking_status"];
-
-			if (booking_status.toUpperCase() == "CONFIRMED") {
-				await fetchBookings();
+		}
+	};
+	const handleStreamUpdate = (short_message: string) => {
+		setStreamingMessage("Processing : " + short_message);
+	};
+	const handleStreamFinal = (data: any) => {
+		if (data.ai_response && data.ai_response.length > 0) {
+			const lastResponse = data.ai_response[data.ai_response.length - 1];
+			if (lastResponse.type === "AIMessage") {
+				setMessages((prev) => [
+					...prev,
+					{
+						type: "ai",
+						text: lastResponse.content,
+					},
+				]);
 			}
-		} catch (err) {
+		}
+
+		// Handle booking status
+		const booking_status = data.booking_status;
+		if (booking_status) {
+			if (booking_status.toUpperCase() === "CONFIRMED") {
+				fetchBookings();
+			}
+			setBookingStatus(booking_status);
+		}
+	};
+	const handleTestStream = (data: string, response_type: string) => {
+		if (response_type == "buffering") {
+			setMessages((prev) => {
+				const newMessages = [...prev];
+				const lastMessage = newMessages[newMessages.length - 1];
+				if (
+					lastMessage &&
+					lastMessage.type === "buffering" &&
+					lastMessage.text.includes("...processing")
+				) {
+					lastMessage.text = `🤖 Processing: ${data}...`;
+				} else {
+					newMessages.push({
+						type: "buffering",
+						text: `🤖 Processing: ${data}...`,
+					});
+				}
+				return newMessages;
+			});
+		} else if (response_type == "final") {
 			setMessages((prev) => [
 				...prev,
 				{
 					type: "ai",
-					text: "Sorry, I encountered an error. Please try again.",
+					text: data,
 				},
 			]);
-			setIsBotTyping(false);
 		}
 	};
+
+	const handleStreamData = (data: any) => {
+		console.log("data", data);
+		if (data.type === "update") {
+			// Handle intermediate updates - you can show progress here
+			console.log("Node update:", data.node);
+			// Optional: Show which node is currently processing
+			// setMessages(prev => {
+			//   const newMessages = [...prev];
+			//   const lastMessage = newMessages[newMessages.length - 1];
+			//   if (lastMessage && lastMessage.type === 'ai' && lastMessage.text.includes('...processing')) {
+			//     lastMessage.text = `🤖 Processing: ${Object.keys(data.data)[0]}...`;
+			//   } else {
+			//     newMessages.push({
+			//       type: 'ai',
+			//       text: `🤖 Processing: ${Object.keys(data.data)[0]}...`
+			//     });
+			//   }
+			//   return newMessages;
+			// });
+		} else if (data.type === "final") {
+			// Handle final response
+			if (data.ai_response && data.ai_response.length > 0) {
+				const lastResponse = data.ai_response[data.ai_response.length - 1];
+				if (lastResponse.type === "AIMessage") {
+					setMessages((prev) => [
+						...prev,
+						{
+							type: "ai",
+							text: lastResponse.content,
+						},
+					]);
+				}
+			}
+
+			// Handle booking status
+			const booking_status = data.booking_status;
+			setBookingStatus(booking_status);
+
+			if (booking_status && booking_status.toUpperCase() === "CONFIRMED") {
+				fetchBookings();
+			}
+		} else if (data.type === "token") {
+			// Handle token streaming for real-time typing effect
+			setMessages((prev) => {
+				const newMessages = [...prev];
+				const lastMessage = newMessages[newMessages.length - 1];
+
+				if (
+					lastMessage &&
+					lastMessage.type === "ai" &&
+					lastMessage.text.includes("...thinking...")
+				) {
+					// Replace thinking message with actual content
+					lastMessage.text = data.content;
+				} else if (
+					lastMessage &&
+					lastMessage.type === "ai" &&
+					!lastMessage.text.includes("...thinking...")
+				) {
+					// Append to existing AI message
+					lastMessage.text += data.content;
+				} else {
+					// Create new AI message
+					newMessages.push({
+						type: "ai",
+						text: data.content,
+					});
+				}
+
+				return newMessages;
+			});
+		}
+	};
+
+	const cancelStream = () => {
+		if (abortControllerRef.current) {
+			abortControllerRef.current.abort();
+		}
+		setIsBotTyping(false);
+	};
+
+	// Cleanup on unmount
+	useEffect(() => {
+		return () => {
+			if (abortControllerRef.current) {
+				abortControllerRef.current.abort();
+			}
+		};
+	}, []);
 
 	return (
 		<div className="app">
@@ -310,7 +469,12 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 				<div className="right-column">
 					{/* Chat Interface */}
 					<div className="chat-container">
-						<div className="chat-header">🤖 Agentic Assistant</div>
+						<div className="chat-header">
+							🤖 Agentic Assistant
+							{bookingStatus && (
+								<span className="booking-status">Status: {bookingStatus}</span>
+							)}
+						</div>
 
 						<div className="chat-messages">
 							{messages.map((message, index) => (
@@ -328,8 +492,28 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 							))}
 							{isBotTyping && (
 								<div className="message ai">
-									{/* You can use a spinner icon or just text */}
-									<pre style={{ margin: 0 }}>🤖 ...thinking...</pre>
+									<pre style={{ margin: 0 }}>
+										<span
+											className="spinner"
+											style={{ marginRight: "8px" }}
+										></span>
+										{streamingMessage}
+										<button
+											onClick={cancelStream}
+											style={{
+												marginLeft: "10px",
+												fontSize: "12px",
+												padding: "2px 6px",
+												background: "#ff4444",
+												color: "white",
+												border: "none",
+												borderRadius: "3px",
+												cursor: "pointer",
+											}}
+										>
+											Cancel
+										</button>
+									</pre>
 								</div>
 							)}
 						</div>
@@ -348,7 +532,7 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 								className="chat-send-btn"
 								disabled={isBotTyping}
 							>
-								Send
+								{isBotTyping ? "Sending..." : "Send"}
 							</button>
 						</form>
 					</div>

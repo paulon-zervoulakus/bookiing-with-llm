@@ -1,14 +1,12 @@
 """This is the Intent Classifier graph"""
 from datetime import datetime
 from langgraph.graph import StateGraph
-from langgraph.prebuilt import create_react_agent
 from langchain.prompts import PromptTemplate
 from langchain_core.messages import AIMessage
-from langchain_core.tools import tool
 from backend.langgraph.multi_graph_agent.llm_setup import base_llm
 from backend.langgraph.multi_graph_agent.states import SharedState
-from backend.langgraph.multi_graph_agent.llm_setup import checkpointer, config
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableConfig
 
 # @tool
 def tool_last_ai_message(state: SharedState) -> str:
@@ -73,7 +71,7 @@ async def node_intent_classifier(state: SharedState) -> SharedState:
     print(f"\nTime check\n - before llm: node_intent_classifier")
     start_time = datetime.now()
 
-    ai_last_response = tool_last_ai_message({"state": state})
+    ai_last_response = tool_last_ai_message(state)
 
     prompt = PromptTemplate(
         input_variables=["message","ai_last_response"],
@@ -85,16 +83,12 @@ async def node_intent_classifier(state: SharedState) -> SharedState:
     llm_result = await intent_chain.ainvoke({
         "message": state["input_message"]
     })
-    # agent_intent_classifier = create_react_agent(
-    #     model=base_llm,
-    #     tools=[tool_last_ai_message],
-    #     prompt=prompt_modifier(),
-    #     checkpointer=checkpointer
-    # )
-
-    # llm_result = await agent_intent_classifier.ainvoke({"messages": [{"role": "user", "content": state.get("input_message", "")}]}, config)
-
-    # ai_messages = [msg.content for msg in llm_result["messages"] if isinstance(msg, AIMessage)]
+    # llm_result = ""
+    # chunk_count = 0
+    # async for chunk in intent_chain.astream({"message": state["input_message"]}, config, stream_mode="update"):
+    #     # for node_name, node_result in chunk.items():
+    #     llm_result += chunk
+    #     chunk_count += 1
 
     result_content = [item.strip() for item in llm_result.split(",")]
 
@@ -132,11 +126,16 @@ async def node_intent_classifier(state: SharedState) -> SharedState:
 
     elapsed = (datetime.now() - start_time).total_seconds()
     print(f"\nTime check\n - after llm: node_intent_classifier - time: {elapsed:.3f}")
-    return { **state, "intent": result_content }
 
-graph_intent_classifier = (
-    StateGraph(SharedState)
-    .add_node("node_intent_classifier", node_intent_classifier)
-    .set_entry_point("node_intent_classifier")
-    .compile()
-)
+    return {
+        **state,
+        "intent": result_content,
+        "short_message": "Node Intent Classifier"
+    }
+
+# graph_intent_classifier = (
+#     StateGraph(SharedState)
+#     .add_node("node_intent_classifier", node_intent_classifier)
+#     .set_entry_point("node_intent_classifier")
+#     .compile()
+# )

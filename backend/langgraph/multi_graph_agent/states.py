@@ -31,6 +31,10 @@ class SharedState(TypedDict, total=False):
     incomplete_fields: Annotated[List[str], lambda prev, new: new]
     error_message: Annotated[Optional[str], lambda prev, new: new]
     messages: Annotated[List[BaseMessage], add_messages]
+    next_action: Annotated[Optional[str], lambda prev, new: new]
+    current_processing_intent: Annotated[Optional[str], lambda prev, new: new]
+    short_message: Annotated[Optional[str], lambda prev, new: new]
+
 
 # class GraphUserState(TypedDict):    
 #     user_info: Annotated[UserInfo, merge_user_info]

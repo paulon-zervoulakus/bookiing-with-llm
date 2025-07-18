@@ -8,8 +8,6 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 import os
 from dotenv import load_dotenv
-from dotenv import load_dotenv
-import os
 
 load_dotenv(dotenv_path="../app-v2/vite-project/.env/")
 
