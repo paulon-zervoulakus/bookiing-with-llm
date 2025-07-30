@@ -4,12 +4,14 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from backend.langgraph.multi_graph_agent.graph_main import build_main_graph
+from backend.langgraph.multi_graph_agent.graph_human_question import build_graph_human_question
 from backend.langgraph.multi_graph_agent.llm_setup import config
 from backend.utils.authenticationUtils import AuthUser, get_current_user
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import RunnableConfig
 from backend.langgraph.multi_graph_agent.states import SharedState
 
+graph_rag = build_graph_human_question()
 graph = build_main_graph()
 
 router = APIRouter(prefix="/api/bot", tags=["agent"])
@@ -184,6 +186,59 @@ async def post_llm_query(
         media_type="text/plain",
         headers={
             "Cache-Control": "no-cache", 
+            "Connection": "keep-alive",
+            "Content-Type": "text/plain"
+        }
+    )
+
+@router.post("/ai-stream/rag")
+async def stream_rag_query(
+    req: ChatRequest
+):
+    async def generate_stream(query: str ):
+        """Generator function for streaming response"""
+        final_response = None
+        async for chunk in graph_rag.astream({"input_message": query}, config, stream_mode="updates"):
+            # Serialize the chunk data before sending
+            serialized_chunk = {}
+            for node_name, node_output in chunk.items():
+                print(f"chunks: {node_name} - {node_output}\n")
+                if node_output:
+                    serialized_output = {}
+                    for key, value in node_output.items():
+                        if key == "messages":
+                            serialized_output[key] = serialize_messages(value)
+                        else:
+                            serialized_output[key] = value
+                        serialized_chunk[node_name] = serialized_output
+
+            # Stream intermediate updates from each node
+            # yield f"data: {json.dumps({'type': 'update', 'data': serialized_chunk})}\n\n"
+
+            # Keep track of the final response
+            for node_name, node_output in chunk.items():
+                if node_output:
+                    final_response = node_output
+
+                # Serialize the final response messages
+            ai_response = serialize_messages(
+                final_response["messages"]) if final_response and "messages" in final_response else []
+
+            # Yield the final result
+            result = {
+                "type": "final",
+                "ai_response": ai_response,
+            }
+            if ai_response != []:
+                yield f"data: {json.dumps(result)}\n\n"
+
+
+
+    return StreamingResponse(
+        generate_stream(req.query),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "Content-Type": "text/plain"
         }

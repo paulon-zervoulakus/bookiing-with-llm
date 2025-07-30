@@ -117,6 +117,63 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 		}
 	};
 
+	const handleChatSubmitN8N = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!chatInput.trim()) return;
+
+		const userMessage = chatInput;
+		setMessages((prev) => [...prev, { type: "human", text: userMessage }]);
+		setChatInput("");
+		setIsBotTyping(true);
+		setBookingStatus("");
+
+		// Cancel any ongoing request
+		if (abortControllerRef.current) {
+			abortControllerRef.current.abort();
+		}
+
+		abortControllerRef.current = new AbortController();
+		try {
+			const response = await fetch(
+				"http://localhost:5678/webhook-test/incoming-message",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${localStorage.getItem("booking_token")}`,
+					},
+					body: JSON.stringify({ chatInput: userMessage }),
+					signal: abortControllerRef.current.signal,
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			const data = await response.json();
+			console.log(data); // <- This is what you're probably looking for
+			setMessages((prev) => [
+				...prev,
+				{
+					type: "ai",
+					text: data[0].output,
+				},
+			]);
+			setIsBotTyping(false);
+		} catch (err) {
+			if ((err as Error).name !== "AbortError") {
+				console.error("Streaming error:", err);
+				setMessages((prev) => [
+					...prev,
+					{
+						type: "ai",
+						text: "Sorry, I encountered an error. Please try again.",
+					},
+				]);
+			}
+			setIsBotTyping(false);
+		}
+	};
 	// Updated streaming chat handler
 	const handleChatSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -518,7 +575,10 @@ const BookingApp: React.FC<BookingAppProps> = ({ user, onLogout }) => {
 							)}
 						</div>
 
-						<form onSubmit={handleChatSubmit} className="chat-input-container">
+						<form
+							onSubmit={handleChatSubmitN8N}
+							className="chat-input-container"
+						>
 							<input
 								type="text"
 								className="chat-input"

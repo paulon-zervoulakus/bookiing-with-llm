@@ -75,7 +75,8 @@ async def node_rag_query(state: SharedState) -> SharedState:
 
     if not human_inquiry_value:
         return {
-            "inquiry_answer": ToolMessage(content="No inquiry to process")
+            **state,
+            "inquiry_answer": "No inquiry to process"
         }
 
     try:
@@ -272,3 +273,22 @@ graph_human_question = (
     .set_entry_point("node_human_question_scraper")
     .compile(checkpointer=checkpointer)
 )
+
+def build_graph_human_question():
+    return StateGraph(SharedState)\
+        .add_node("node_human_question_scraper", node_human_question_scraper)\
+        .add_node("node_rag_query", node_rag_query)\
+        .add_node("node_summarize_response", node_summarize_response)\
+        .add_node("end", lambda state: state)\
+        .add_conditional_edges(
+            "node_human_question_scraper",
+            route_after_scraper,
+            {
+                "node_summarize_response":"node_summarize_response",
+                "node_rag_query":"node_rag_query",
+                "end":"end"
+            }
+        )\
+        .add_edge("node_rag_query","node_summarize_response")\
+        .set_entry_point("node_human_question_scraper")\
+        .compile(checkpointer=checkpointer)

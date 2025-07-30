@@ -32,6 +32,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",  # React development server
         "http://localhost:5173",  # Vite development server
+        "http://localhost:5678", # n8n
         "https://yourdomain.com"  # Production domain
     ],
     allow_credentials=True,
